@@ -1,0 +1,207 @@
+/*
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Dashboard</title>
+  <style>
+    .light-theme {
+      --color1 : #f4f4f9;
+      --color2 : #444444;
+      --color3 : #666666;
+      --color4 : #444444;
+      --color5 : #ffffff;
+      --color6 : #dddddd;
+      --color7 : #ffffff;
+      --color8 : #dddddd;
+      --color9 : #4CAF50;
+      --color10 : white;
+      --color11 : #45a049;
+      --color12 : #ffffff;
+      --color13 : #dddddd;
+      --color14 : #f0f0f0;
+    }
+    
+    .dark-theme {
+      --color1 : #1a1a1a;
+      --color2 : #8a2be2;
+      --color3 : #8a2be2;
+      --color4 : #dcdcdc;
+      --color5 : #555555;
+      --color6 : #dcdcdc;
+      --color7 : #555555;
+      --color8 : #dcdcdc;
+      --color9 : #8a2be2;
+      --color10 : #dcdcdc;
+      --color11 : #7a1db3;
+      --color12 : #8a2be2;
+      --color13 : #dcdcdc;
+      --color14 : #7a1db3;
+    }
+
+    html {
+      font-family: Helvetica, Arial, sans-serif;
+      display: inline-block;
+      margin: 0px auto;
+      text-align: center;
+      background-color: var(--color1);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body {
+      margin-top: 50px;
+      color: #333;
+    }
+    body.light-theme {
+      background-color: var(--color1);
+    }
+
+    body.dark-theme {
+      background-color: var(--color1);
+    }
+    h1 {
+      color: var(--color2);
+      margin: 50px auto 30px;
+      font-size: 2rem;
+    }
+    h2 {
+      color: var(--color3);
+      margin: 30px auto 20px;
+      font-size: 1.5rem;
+    }
+    p {
+      font-size: 1.2rem;
+      color: var(--color4);
+      margin-bottom: 10px;
+    }
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    .sensor-box {
+      background-color: var(--color5);
+      border: 1px solid var(--color6);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .status-box, .control-box {
+      background-color: var(--color7);
+      border: 1px solid var(--color8);
+      border-radius: 10px;
+      padding-bottom: 20px;
+      margin: 20px auto;
+      width: 100%;
+      max-width: 500px; 
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .status-box p, .control-box p {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .control-box button {
+      background-color: var(--color9);
+      border: none;
+      color: var(--color10);
+      padding: 15px 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 5px;
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+    }
+    .control-box button:hover {
+      background-color: var(--color11);
+    }
+    .theme-switch {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 5px 5px;
+      background-color: var(--color12);
+      opacity: 0.3;
+      border: 1px solid var(--color13);
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--color4);
+      transition: background-color 0.3s ease;
+    }
+
+    .theme-switch:hover {
+      background-color: var(--color14);
+    }
+
+  </style>
+</head>
+<body class="light-theme">
+  <h1>Sistem Monitoring Nutrisi Otomatis</h1>
+
+  <div id="webpage">
+    <h2>Pembacaan Sensor</h2>
+    <div class="sensor-grid">
+      <div class="sensor-box">
+        <p><strong>pH</strong>: <span id="pH">-</span></p>
+      </div>
+      <div class="sensor-box">
+        <p><strong>PPM</strong>: <span id="PPM">-</span></p>
+      </div>
+      <div class="sensor-box">
+        <p><strong>Suhu</strong>: <span id="suhu">-</span> <sup>o</sup>C</p>
+      </div>
+      <div class="sensor-box">
+        <p><strong>Tinggi Air</strong>: <span id="tinggi_cm">-</span> cm</p>
+      </div>
+    </div>
+    <div class="status-box">
+      <p><strong>Kondisi Otomatisasi:</strong> <br> <span id="kondisiOtomatisasi">-</span></p>
+    </div>
+  </div>
+
+  <!-- Pindahkan tulisan "Kontrol Sistem" di luar control-box -->
+  <h2>Kontrol Sistem</h2>
+  
+  <div id="saklar" class="control-box">
+    <p>Saklar Otomatisasi</p>
+    <button onclick="control('/otomatisasi_on')">ON</button>
+  </div>
+
+  <div class="theme-switch" onclick="toggleTheme()">Ganti Tema</div>
+
+  <script>
+
+    function control(endpoint) {
+      fetch(endpoint)
+        .then(response => response.text())
+        .then(data => {
+          console.log(data);
+        });
+    }
+
+    function toggleTheme() {
+      const body = document.body;
+      const currentTheme = body.classList.contains('light-theme') ? 'light-theme' : 'dark-theme';
+      body.classList.toggle('light-theme', currentTheme === 'dark-theme');
+      body.classList.toggle('dark-theme', currentTheme === 'light-theme');
+      
+      const buttonText = body.classList.contains('dark-theme') ? 'Tema Terang' : 'Tema Gelap';
+      document.querySelector('.theme-switch').textContent = buttonText;
+    }
+
+    setInterval(() => {
+      fetch('/data')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('pH').textContent = data.pH;
+          document.getElementById('PPM').textContent = data.PPM;
+          document.getElementById('suhu').textContent = data.suhu;
+          document.getElementById('tinggi_cm').textContent = data.tinggi_cm;
+          document.getElementById('kondisiOtomatisasi').textContent = data.kondisiOtomatisasi;
+        });
+    }, 1000);
+  </script>
+</body>
+</html>
+*/
