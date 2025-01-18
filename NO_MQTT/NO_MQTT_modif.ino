@@ -6,7 +6,7 @@
 #include <ESP8266HTTPClient.h>  
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
-//#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h>
 //#include <RTClib.h>
 //#include <OneWire.h>
 //#include <DallasTemperature.h>
@@ -14,7 +14,7 @@
 
 // Sistem OTA
 const char* ota_password = "123";
-String OTA_msg = "Update #1";
+String OTA_msg = "cuy";
 
 // Google Apps Script 
 String Web_App_URL = "https://script.google.com/macros/s/AKfycbwVtR04NDLnKFMrjlx2EHCEvLHktAMAuHcxUE4rBzrnD1UwdEL0UoegfaXF4j328ZQHUQ/exec";
@@ -24,7 +24,10 @@ int dataSpreadsheet;
 void spreadsheet();
 
 // MQTT
-const char* mqtt_server = "broker.mqtt-dashboard.com";
+//const char* mqtt_server = "broker.mqtt-dashboard.com";
+const char* mqtt_server = "ee.unsoed.ac.id";
+//const char* mqtt_server = "broker.hivemq.com";
+
 const char* mqtt_user = "123"; 
 const char* mqtt_password = "123"; 
 
@@ -67,25 +70,25 @@ const char* PUBTOPIC_STATUS_SISTEM = "greenhouse/output/status";
 const char* PUBTOPIC_ALARM = "greenhouse/output/alarm";
 
 // Koneksi WiFi
-//const char* ssid ="bebas";
-//const char* password = "akunulisaja";
+//const char* ssid ="Re-invigor1";
+//const char* password = "santayajacik";
 const char* ssid ="Prastzy.net";
 const char* password = "123456781";
 
 // Deklarasi Pin
-//#define ONE_WIRE_BUS 0
-//#define pin_pH D4//39 
-//#define pin_EC D4//36  
-//#define PIN_TRIG D4//2
-//#define PIN_ECHO D4//15
-#define relay_pHup D4//17   
-#define relay_pHdn D4//12  
-#define relay_nutrisi D4//26  
-#define relay_ambilSampel D4//5  
-#define relay_buangSampel D4//18  
-#define relay_penyiram D4//14   
-#define relay_mixer D4//27 
-#define relay_tangki D4//27
+//#define ONE_WIRE_BUS 13
+//#define pin_pH 36 
+//#define pin_EC 39 
+//#define PIN_TRIG 5
+//#define PIN_ECHO 18
+#define relay_pHup D1//12
+#define relay_pHdn D2//14
+#define relay_nutrisi D3//15
+#define relay_mixer D4//4 
+#define relay_ambilSampel D5//27  
+#define relay_buangSampel D6//26
+#define relay_penyiram D7//16
+#define relay_tangki D8//0
 
 // Deklarasi Object
 Ticker ticker1, ticker2;
@@ -93,7 +96,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 //OneWire oneWire(ONE_WIRE_BUS);
 //DallasTemperature sensors(&oneWire);
-//LiquidCrystal_I2C lcd(0x27,20,4);
+LiquidCrystal_I2C lcd(0x27,20,4);
 //RTC_DS1307 rtc;
 
 // Adjust nilai variabel
@@ -106,22 +109,22 @@ char daysOfTheWeek[7][12] = {"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Juma
 String aktuator1 = "Padam", aktuator2 = "Padam", aktuator3 = "Padam", aktuator4 = "Padam";
 String aktuator5 = "Padam", aktuator6 = "Padam", aktuator7 = "Padam", aktuator8 = "Padam";
 float set_jarak = 100, set_pH = 7, set_PPM = 800;
+String fuzzyph, fuzzyppm;
 float voltagepH, voltageEC, pH, PPM, suhu, tinggi_cm, jarak_cm;
 int adcValuepH, adcValueEC;
-int duration;
-String alarm = "Belum di set";
+long duration;
+String alarm1 ;
 bool kondisi1 = false;
 String statusSistem = "Mode Manual";
 bool saklar_tangki = false;
 float kalibrasi_suhu = -0.3;
 // Kalibrasi (berdasarkan rumus y = 0.0146x - 12.1996)
-const float m = 0.0146;  // Kemiringan
-const float b = -12.1996;  // Offset
-float voltageph2, voltageph1, inputph2, inputph1;
+float m1 = 0.0146;  // Kemiringan
+float b1 = -12.1996;  // Offset
+float voltageph2, voltageph1, inputph2, inputph1, input_pH, input_PPM;
 String hasilkalibrasiph; 
-float m1, b1, m2, b2;
-float slopEC = 0.00585;
-float interceptEC = 0.59305; 
+float m2 = 0.00585;
+float b2 = 0.59305; 
 float voltageec2, voltageec1, inputec2, inputec1;
 String hasilkalibrasiec; 
 
@@ -162,24 +165,7 @@ void setup() {
   
   Serial.begin(115200);
   //sensors.begin();
-  setup_wifi();
-  ArduinoOTA.setHostname("esp8266 - Nutrisi Otomatis");
-  ArduinoOTA.setPassword(ota_password);
-  ArduinoOTA.begin();  
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-  ticker1.attach(3, monitoring);
-  ticker2.attach(3, kontrol_tinggi);
   /*
-  // LCD Setup                  
-  lcd.backlight();
-  lcd.setCursor(3,1);
-  lcd.print("START  PROGRAM");
-  lcd.setCursor(3,2);
-  lcd.print("==============");
-  delay(1000);
-  lcd.clear();
-
   // RTC
   if (! rtc.begin()) {
     Serial.println("RTC tidak ditemukan");
@@ -190,6 +176,24 @@ void setup() {
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set waktu sesuai waktu kompilasi
   }
   */
+  // LCD Setup   
+  //lcd.begin();  
+  lcd.backlight();
+  lcd.setCursor(3,1);
+  lcd.print("START  PROGRAM");
+  lcd.setCursor(3,2);
+  lcd.print("==============");
+  delay(1000);
+  lcd.clear();
+
+  setup_wifi();
+  ArduinoOTA.setHostname("esp32 - Nutrisi Otomatis");
+  ArduinoOTA.setPassword(ota_password);
+  ArduinoOTA.begin();  
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  ticker1.attach(3, monitoring);
+  ticker2.attach(3, kontrol_tinggi);
 }
 
 void loop() { 
@@ -207,6 +211,7 @@ void loop() {
     }  
     */
   }
+  yield();
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
@@ -305,10 +310,12 @@ void callback(char *topic, byte *payload, unsigned int length) {
   // kontrol Manual buka tangki
   if (!strcmp(topic, SUBTOPIC_BUKATANGKI)) {
     if (!strncmp(msg, "on", length)) {
+      digitalWrite(relay_tangki, LOW);
       Serial.println("Isi tangki Manual ON");
       saklar_tangki = true;
       aktuator1 = "Menyala";
     } else if (!strncmp(msg, "off", length)) {
+      digitalWrite(relay_tangki, HIGH);
       Serial.println("Isi tangki Manual OFF");
       saklar_tangki = false;
       aktuator1 = "Padam";
@@ -363,8 +370,8 @@ void callback(char *topic, byte *payload, unsigned int length) {
     setWaktu[0] = atoi(msg); 
     Serial.print("Set Jam menjadi : ");
     Serial.println(setWaktu[0]);
-    alarm = String(setWaktu[0] + " : " + String(setWaktu[1]));
-    client.publish(PUBTOPIC_ALARM, alarm.c_str());
+    alarm1 = String(setWaktu[0] + " : " + String(setWaktu[1]));
+    client.publish(PUBTOPIC_ALARM, alarm1.c_str());
   }
 
   // Set Menit
@@ -372,8 +379,8 @@ void callback(char *topic, byte *payload, unsigned int length) {
     setWaktu[1] = atoi(msg); 
     Serial.print("Set Menit menjadi : ");
     Serial.println(setWaktu[1]);
-    alarm = String(setWaktu[0]) + " : " + String(setWaktu[1]);
-    client.publish(PUBTOPIC_ALARM, alarm.c_str());
+    alarm1 = String(setWaktu[0]) + " : " + String(setWaktu[1]);
+    client.publish(PUBTOPIC_ALARM, alarm1.c_str());
   }
   
   // Set pH
@@ -395,6 +402,35 @@ void callback(char *topic, byte *payload, unsigned int length) {
       Serial.println("Mengambil data untuk spreadsheet");
       spreadsheet();
     }
+  }
+  // Input pH
+  if (!strcmp(topic, "greenhouse/input/inputph")) {
+    input_pH = atof(msg); 
+    baca_pH();
+    outputFuzzy();
+    baca_jarak();
+    if(input_pH < set_pH){
+      fuzzyph = "Pompa pH Up akan menyala selama : " + String(lamaPompa_pH*(tinggi_cm/set_jarak)) + " detik";
+    }else{
+      fuzzyph = "Pompa pH Down akan menyala selama : " + String(lamaPompa_pH*(tinggi_cm/set_jarak)) + " detik";
+    }
+    Serial.println(fuzzyph);
+    client.publish ("greenhouse/output/fuzzyph", fuzzyph.c_str());
+    Serial.print("Input pH menjadi : ");
+    Serial.println(input_pH);
+    
+  }
+  // Input PPM
+  if (!strcmp(topic, "greenhouse/input/inputppm")) {
+    input_PPM = atof(msg); 
+    baca_PPM();
+    outputFuzzy();
+    baca_jarak();
+    fuzzyppm = "Pompa Nutrisi akan menyala selama : " + String(lamaPompa_PPM*(tinggi_cm/set_jarak)) + " detik";
+    Serial.println(fuzzyppm);
+    client.publish ("greenhouse/output/fuzzyppm", fuzzyppm.c_str());
+    Serial.print("Input PPM menjadi : ");
+    Serial.println(input_PPM);
   }
   //==========================================================
   //KALIBRASI SENSOR PH
@@ -426,8 +462,8 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if (!strcmp(topic, "greenhouse/input/kalibrasiph")) {
     if (!strncmp(msg, "on", length)) {
       Serial.println("Mengkalibrasi sensor pH");
-      m1 = (voltageph2 - voltageph1)/(inputph2 - inputph1);
-      b1 = voltageph1 - (inputph1 * m1);
+      m1 = (inputph2 - inputph1)/(voltageph2 - voltageph1);
+      b1 = inputph1 - (voltageph1 * m1);
       char m1Str[10]; char b1Str[10];
       dtostrf(m1, 1, 5, m1Str);
       dtostrf(b1, 1, 5, b1Str);
@@ -473,8 +509,8 @@ void callback(char *topic, byte *payload, unsigned int length) {
   if (!strcmp(topic, "greenhouse/input/kalibrasiec")) {
     if (!strncmp(msg, "on", length)) {
       Serial.println("Mengkalibrasi sensor EC");
-      m2 = (voltageec2 - voltageec1)/(inputec2 - inputec1);
-      b2 = voltageec1 - (inputec1 * m2);
+      m2 = (inputec2 - inputec1)/(voltageec2 - voltageec1);
+      b2 = inputec1 - (voltageec1 * m2);
       char m2Str[10]; char b2Str[10];
       dtostrf(m2, 1, 5, m2Str);
       dtostrf(b2, 1, 5, b2Str);
@@ -487,10 +523,25 @@ void callback(char *topic, byte *payload, unsigned int length) {
 
 void reconnect() {
   while (!client.connected()) {
+    yield();
     Serial.println("Attempting MQTT connection...");
     String clientId = "esp32-clientId-";
     clientId += String(random(0xffff), HEX);
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
+  //=================================================================
+  baca_pH(); baca_PPM(); baca_jarak(); baca_suhu(); 
+  lcd.clear();
+  lcd.setCursor(0,0); 
+  lcd.print("MQTT Connected");
+  lcd.setCursor(0,1); 
+  lcd.print("nilai pH: "); lcd.print(pH);
+  lcd.setCursor(0,2); 
+  lcd.print("nilai EC: "); lcd.print(PPM);
+  lcd.setCursor(0,3); 
+  lcd.print("Nilai Suhu: "); lcd.print(suhu); lcd.print(" C");
+  delay(1000);
+  lcd.clear();
+  //=============================================================
       Serial.println("Connected");
       Serial.print("Status OTA : ");
       Serial.println(OTA_msg);
@@ -525,12 +576,28 @@ void reconnect() {
       client.subscribe("greenhouse/input/voltageec1");
       client.subscribe("greenhouse/input/voltageec2");
       client.subscribe("greenhouse/input/kalibrasiec");
+      client.subscribe("greenhouse/input/inputph");
+      client.subscribe("greenhouse/input/inputppm");
     } else {
+      yield();
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 3 seconds");
+      //=================================================================
+  baca_pH(); baca_PPM(); baca_jarak(); baca_suhu(); 
+  lcd.clear();
+  lcd.setCursor(0,0); 
+  lcd.print("Connecting to MQTT");
+  lcd.setCursor(0,1); 
+  lcd.print("nilai pH: "); lcd.print(pH);
+  lcd.setCursor(0,2); 
+  lcd.print("nilai EC: "); lcd.print(PPM);
+  lcd.setCursor(0,3); 
+  lcd.print("Nilai Suhu: "); lcd.print(suhu); lcd.print(" C");
+  //=============================================================
       delay(3000);
     }
+    yield();
   }
 }
 
@@ -554,19 +621,17 @@ void monitoring(){
   baca_suhu();  
   baca_RTC();
   //DateTime now = rtc.now(); 
-  /*
+  
   // Print LCD
   lcd.setCursor(0,1); 
-  lcd.print("nilai pH : "); lcd.print(pH);
+  lcd.print("nilai pH: "); lcd.print(pH);
   lcd.setCursor(0,2); 
-  lcd.print("nilai EC : "); lcd.print(PPM);
+  lcd.print("nilai EC: "); lcd.print(PPM);
   lcd.setCursor(0,3); 
-  lcd.print("Nilai Suhu : "); lcd.print(suhu); lcd.print(" C");
-  lcd.clear();
-  */
+  lcd.print("Nilai Suhu: "); lcd.print(suhu); lcd.print(" C");
+  
    
   // Print MQTT
-  baca_RTC();
   client.publish(PUBTOPIC_PH, String(pH).c_str());
   client.publish(PUBTOPIC_PPM, String(PPM).c_str());
   client.publish(PUBTOPIC_SUHU, String(suhu).c_str());
@@ -657,7 +722,7 @@ void baca_pH(){
   /*
   adcValuepH = analogRead(pin_pH);
   voltagepH = (adcValuepH / 4095.0) * 3300;
-  pH = m * voltagepH + b - 1;
+  pH = m1 * voltagepH + b1-1;
   pH = constrain(pH, 0.0, 14.0);
   */
   // Angka random dari 5 sampai 9 dengan interval 0,1
@@ -665,14 +730,18 @@ void baca_pH(){
   pH = 5.0 + (randomNumber * 0.1);
   voltagepH = random(1000, 1200);
   //==============================================
-  Error_pH = abs(set_pH - pH);
+  if(kondisi1){
+    Error_pH = abs(set_pH - pH);
+  }else{
+    Error_pH = abs(set_pH - input_pH);
+  }
 }
 
 void kontrol_pH(){
   baca_pH();
   outputFuzzy();
   baca_jarak();
-  if (pH < set_pH  ){
+  if (pH < set_pH || input_pH < set_pH ){
     Serial.println("==================================");
     Serial.println("Mengaktifkan relay_pHup");
     Serial.println("==================================");
@@ -692,7 +761,7 @@ void kontrol_pH(){
     digitalWrite(relay_pHdn, HIGH);
     aktuator7 = "Padam";
   }
-  else if (pH >= set_pH  ){
+  else if (pH >= set_pH || input_pH >= set_pH ){
     Serial.println("==================================");
     Serial.println("Mengaktifkan relay_pHdn");
     Serial.println("==================================");
@@ -719,17 +788,24 @@ void baca_PPM(){
   /*
   adcValueEC = analogRead(pin_EC);
   voltageEC = (adcValueEC / 4095.0) * 3300;
-  PPM = (slopEC * voltagepH) + interceptEC;
+  PPM = ((m2 * voltageEC) + b2)*500;
   */
   // Angka random dari 550 sampai 1051
   voltageEC = random(1000, 1200);
   PPM = random(550, 1051); 
   //==================================
-  if (PPM <= set_PPM){
-    Error_PPM = set_PPM - PPM;
-  }
-  else if (PPM > set_PPM){
-    Error_PPM = 0;
+  if(kondisi1){
+    if (PPM <= set_PPM){ 
+      Error_PPM = set_PPM - PPM;
+    }else if (PPM > set_PPM){
+      Error_PPM = 0;
+    }
+  }else{
+    if (input_PPM <= set_PPM){
+      Error_PPM = set_PPM - input_PPM;
+    }else if (input_PPM > set_PPM){
+      Error_PPM = 0;
+    }
   }
 }
 
@@ -737,7 +813,7 @@ void kontrol_PPM(){
   baca_PPM();
   outputFuzzy();
   baca_jarak();
-  if (PPM < set_PPM  ){
+  if (PPM < set_PPM || input_PPM < set_PPM ){
     Serial.println("==================================");
     Serial.println("Mengaktifkan relay_nutrisi");
     Serial.println("==================================");
@@ -753,7 +829,7 @@ void kontrol_PPM(){
     digitalWrite(relay_nutrisi, HIGH);
     aktuator8 = "Padam";
   }
-  else if (PPM >= set_PPM  ){
+  else if (PPM >= set_PPM || input_PPM >= set_PPM  ){
     Serial.println("==================================");
     Serial.println("Menonaktifkan relay_nutrisi");
     Serial.println("==================================");
@@ -765,31 +841,38 @@ void kontrol_PPM(){
 
 void baca_jarak(){
   /*
+  digitalWrite(PIN_TRIG, LOW);
+  delayMicroseconds(10);
   digitalWrite(PIN_TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(PIN_TRIG, LOW);
   duration = pulseIn(PIN_ECHO, HIGH);
-  jarak_cm = duration / 58; //dalam cm
+  jarak_cm = duration * 0.034 / 2;
+
+  if(jarak_cm > set_jarak){
+    tinggi_cm = 1;
+  }else{
+    tinggi_cm = set_jarak - jarak_cm;
+  }
   */
   // Angka random dari 0 sampai 21
-  jarak_cm  = random(0, 21); 
+  //jarak_cm  = random(10, 31); 
   //==============================
-  tinggi_cm = set_jarak - jarak_cm;
+  
+  tinggi_cm = 99;
 }
 
 void kontrol_tinggi(){
   baca_jarak();
-  if(tinggi_cm > set_jarak){
-    if(saklar_tangki){
-      digitalWrite(relay_tangki, LOW);
-    }else {
-      digitalWrite(relay_tangki, HIGH);
-    }
-  }else{
-    if(!saklar_tangki){
-      digitalWrite(relay_tangki, HIGH);
-    }else {
-      digitalWrite(relay_tangki, LOW);
+  if(kondisi1){
+    if(tinggi_cm > set_jarak){
+      if(saklar_tangki){
+        digitalWrite(relay_tangki, LOW);
+      }else {
+        digitalWrite(relay_tangki, HIGH);
+      }
+    }else{
+      digitalWrite(relay_tangki, LOW); 
     }
   }
 }
@@ -798,7 +881,7 @@ void baca_suhu(){
   /*
   sensors.requestTemperatures(); 
   suhu = sensors.getTempCByIndex(0);
-  suhu = kalibrasi_suhu;
+  suhu += kalibrasi_suhu;
   */
   // Angka random dari 25 sampai 35
   suhu = random(25, 35); 
@@ -812,8 +895,21 @@ void setup_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    
     Serial.print(".");
+    //=================================================================
+  baca_pH(); baca_PPM(); baca_jarak(); baca_suhu(); 
+  lcd.clear();
+  lcd.setCursor(0,0); 
+  lcd.print("Connecting to WiFi");
+  lcd.setCursor(0,1); 
+  lcd.print("nilai pH: "); lcd.print(pH);
+  lcd.setCursor(0,2); 
+  lcd.print("nilai EC: "); lcd.print(PPM);
+  lcd.setCursor(0,3); 
+  lcd.print("Nilai Suhu: "); lcd.print(suhu); lcd.print(" C");
+  //=============================================================
+  delay(500);
   }
   Serial.println("");
   Serial.println("WiFi connected");
@@ -839,7 +935,7 @@ void baca_RTC(){
   pesan += String(now.minute());
   pesan += ':';
   pesan += String(now.second());
-  Serial.println(pesan);  // Kirimkan pesan ke serial monitor
+  //Serial.println(pesan);  // Kirimkan pesan ke serial monitor
   client.publish(PUBTOPIC_WAKTU, pesan.c_str());  // Kirimkan pesan ke MQTT
 
 
